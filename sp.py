@@ -24,9 +24,9 @@ def get_img(Session, id_numm):
         response = Session.get(get_url, params=params)
         img_url = re.compile('"(.*?)"').findall(response.text)[0]
         img = requests.get(img_url, timeout=None)
-        with open('C:/Users/bjw10/Desktop/kaust/para/img.png', 'wb') as f:
+        with open('C:/img.png', 'wb') as f:
             f.write(img.content)
-        Image.open('C:/Users/bjw10/Desktop/kaust/para/img.png').show()
+        Image.open('C:/img.png').show()
     except Exception as e:
         print("Imgae_Error:", e.args)
 
