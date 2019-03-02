@@ -6,12 +6,6 @@ from urllib.parse import urlencode
 import pandas as pd
 import numpy as np
 
-def get_info():
-    id_num =xls['准考证号'][it]
-    name = xls['姓名'][it]
-    #print(id_num,name)
-    return id_num, name
-
 def get_img(Session, id_numm):
     try:
         headers = {
@@ -36,8 +30,8 @@ def get_img(Session, id_numm):
     except Exception as e:
         print("Imgae_Error:", e.args)
 
-def get_score(Session, id_num, name):
-    capcha = input('请打开图片输入验证码:')
+def get_score(Session, id_num, name, level):
+    capcha = input('Input verification code:')
 
     headers = {
         'Connection': 'keep - alive',
@@ -49,8 +43,13 @@ def get_score(Session, id_num, name):
 
     query_url = "http://cache.neea.edu.cn/cet/query"
 
+    test = {
+        '1': 'CET4_182_DANGCI',
+        '2': 'CET6_182_DANGCI',
+    }
+
     data = {
-        'data': 'CET6_182_DANGCI' + ',' + str(id_num) + ',' + name,
+        'data': test.get(level) + ',' + str(id_num) + ',' + name,
         'v': capcha
     }
     data = urlencode(data)
@@ -60,42 +59,33 @@ def get_score(Session, id_num, name):
         if e is not None:
             #print(e)
             if '验证码错误' in e[1]:
-                print("验证码输入错误！")
+                print("Verification code error!")
                 get_img(Session, id_num)
-                get_score(Session, id_num, name)
+                get_score(Session, id_num, name, level)
             else:
                 print(e[0])
     else:
         id_num = re.compile("z:'(.*?)'").findall(response.text)[0]
         name = re.compile("n:'(.*?)'").findall(response.text)[0]
-        '''
-        school = re.compile("x:'(.*?)'").findall(response.text)[0]
-        '''
         score = re.compile("s:(.*?),").findall(response.text)[0]
         listening = re.compile("l:(.*?),").findall(response.text)[0]
         reading = re.compile("r:(.*?),").findall(response.text)[0]
         writing = re.compile("w:(.*?),").findall(response.text)[0]
         rank = re.compile("kys:'(.*?)'").findall(response.text)[0]
-        '''
-        print("\n====================\n\n六级笔试成绩：")
-        print("准考证号：" + str(id_num))
-        print("姓名：" + str(name))
-        print("学校：" + str(school))
-        print("总分：" + str(score))
-        print("听力：" + str(listening))
-        print("阅读：" + str(reading))
-        print("写作与翻译：" + str(writing))
-        print("\n====================\n\n六级口试成绩：")
-        print("等级：" + str(rank))
-        '''
-        ret.loc[it] = [str(id_num),str(name),str(score),str(listening),str(reading),str(writing),str(rank)]
-        ret.to_excel('op.xlsx')
+        return [str(name),str(id_num),str(score),str(listening),str(reading),str(writing),str(rank)]
+        
 
+def cetSpider(inputName, outputName):
+    xls = pd.read_excel(inputName)
+    ret = pd.DataFrame(xls, columns = ['姓名', '准考证号', '总分', '听力','阅读','写作与翻译','口语等级'])
+    for it in range(27):
+        id_num =xls['准考证号'][it]
+        name = xls['姓名'][it]
+        level = str(id_num)[9]
+        s = requests.Session()
+        get_img(s, id_num)
+        ret.loc[it] = get_score(s, id_num, name, level)
+        ret.to_excel(outputName)
 
-xls = pd.read_excel('tst1.xlsx')
-ret = pd.DataFrame(xls, columns = ['姓名', '准考证号', '总分', '听力','阅读','写作与翻译','口语等级'])
-for it in range(27):
-    id_num, name = get_info()
-    s = requests.Session()
-    get_img(s, id_num)
-    get_score(s, id_num, name)
+if __name__ == '__main__':
+    cetSpider('demo/tst1.xlsx', 'demo/op.xlsx')
